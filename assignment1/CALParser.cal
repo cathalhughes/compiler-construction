@@ -1,0 +1,322 @@
+options {
+    IGNORE_CASE = true;
+    DEBUG_TOKEN_MANAGER = false;
+    }
+PARSER_BEGIN(CALParser)
+
+  public class CALParser {
+    //Parser execution
+    public static void main ( String args [ ] ) {
+
+      //Parser initialization
+      CALParser parser;
+
+      // Use console input rather than a file stream
+      if(args.length == 0){
+        System.out.println ("CALParser: Reading input ...");
+        parser = new CALParser(System.in);
+      }
+      //File Stream input
+      else if(args.length == 1){
+        System.out.println ("" );
+        System.out.println ("CALParser: Reading the file " + args[0] + " ..." );
+        System.out.println ("" );
+        try {
+          parser = new CALParser(new java.io.FileInputStream(args[0]));
+        }
+        catch(java.io.FileNotFoundException e) {
+          System.out.println ("CALParser: The file " + args[0] + " was not found.");
+          return;
+        }
+      }
+      else {
+        System.out.println ("CALParser:  You must use one of the following:");
+        System.out.println ("         java CALParser < file");
+        System.out.println ("Or");
+        System.out.println ("         java CALParser file");
+        return ;
+      }
+      try {
+	  /*
+	  for (Token t = getNextToken(); t.kind!=EOF; t = getNextToken()) {
+				// Print out the actual text for the constants, identifiers etc.
+				if (t.kind==NUM) {
+					System.out.print(String(t.kind));
+					System.out.print("("+t.image+") ");
+				} 
+				if (t.kind==ID) {
+					System.out.print("Identifier");
+					System.out.print("("+t.image+") ");
+				}
+		}
+				*/
+			
+		parser.prog();
+        System.out.println ("" );
+        System.out.println ("CALParser: The input was read sucessfully.");
+        System.out.println ("" );
+      }
+      catch(ParseException e){
+        System.out.println ("CALParser: There was an error during the parse.");
+        System.out.println (e.getMessage());
+      }
+      catch(TokenMgrError e){
+        System.out.println ("CALParser: There was an error.");
+        System.out.println (e.getMessage());
+      }
+    }
+  }
+PARSER_END(CALParser)
+
+TOKEN_MGR_DECLS :
+{
+	static int commentNesting = 0;
+}
+
+
+//IGNORE TABS/SPACES/NEW LINES
+SKIP : {
+    " "
+|   "\t"
+|   "\n"
+|   "\r"
+}
+
+//SKIP SINGLE LINE COMMENT
+SKIP : {
+    <"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+}
+
+
+SKIP : {
+    "/*" { commentNesting++; } : IN_COMMENT
+}
+
+<IN_COMMENT> SKIP : {
+    "/*" { commentNesting++; }
+    | "*/" { commentNesting--;
+        if (commentNesting == 0)
+            SwitchTo(DEFAULT);
+    }
+    | <~[]>
+}
+
+//RESERVED TOKENS
+TOKEN: {
+	<VARIABLE : "variable">
+|	<CONSTANT : "constant">
+|	<RETURN : "return">
+|	<INTEGER : "integer">
+|	<BOOLEAN : "boolean">
+|	<VOID : "void">
+|	<MAIN : "main">
+|	<IF : "if">
+|	<ELSE : "else">
+|	<TRUE : "true">
+|	<FALSE : "false">
+|	<WHILE : "while">
+|	<END : "end">
+|	<BEGIN : "begin">
+|	<IS : "is">
+|	<SKIP_TOKEN : "skip">
+}
+
+//TOKENS IN THE LANGUAGE
+TOKEN: {
+	<COMMA : ",">
+|	<SEMICOLON : ";">
+|	<COLON : ":">
+|	<ASSIGNMENT : ":=">
+|	<LEFTBRACKET : "(">
+|	<RIGHTBRACKET : ")">
+|	<PLUS : "+">
+|	<MINUS : "-">
+|	<NEGATE : "~">
+|	<OR : "|">
+|	<AND : "&">
+|	<EQUALS: "=">
+|	<NOTEQUALS: "!=">
+|	<LT : "<">
+|	<LT_EQ : "<=">
+|	<GT : ">">
+|	<GT_EQ : ">=">
+}
+
+//NUMBERS AND IDS
+
+TOKEN : {
+	<NUM : (["0"]) | ("-")? ["1" - "9"] (<DIGIT>)* >
+|	<#DIGIT : ["0" - "9"]>
+|	<ID : <LETTER> (<LETTER> | <DIGIT> | "_")* >
+|	<#LETTER : ["a"-"z", "A"-"Z"]>
+}
+
+
+// Anything not recognised so far
+TOKEN :
+{
+<OTHER : ~[]>
+}
+
+//THE GRAMMAR
+
+void prog() : {}
+{
+	decl_list() function_list() main()
+} 
+
+void decl_list() : {}
+{
+	(decl() <SEMICOLON> decl_list())?
+}
+
+void decl() : {}
+{
+	var_decl() | const_decl()
+}
+
+void var_decl() : {}
+{
+	<VARIABLE> <ID> <COLON> type()
+}
+
+void const_decl() : {}
+{
+	<CONSTANT> <ID> <COLON> type() <ASSIGNMENT> expression()
+}
+
+void function_list() : {}
+{
+	(function() function_list())? 
+}
+
+void function() : {}
+{
+	type() <ID> <LEFTBRACKET> paramerter_list() <RIGHTBRACKET> <IS>
+	decl_list()
+	<BEGIN>
+	statement_block()
+	<RETURN> <LEFTBRACKET> (expression())? <RIGHTBRACKET> <SEMICOLON>
+	<END>
+}
+
+void type() : {}
+{
+	<INTEGER> | <BOOLEAN> | <VOID>
+}
+
+void paramerter_list() : {}
+{
+	(nemp_parameter_list())?
+}
+
+void nemp_parameter_list() : {}
+{
+	<ID> <COLON> type() nemp_parameter_list_prime()
+}
+
+void nemp_parameter_list_prime() : {}
+{
+	(<COMMA> nemp_parameter_list())? 
+}
+
+void main() : {}
+{
+	<MAIN>
+	<BEGIN>
+	decl_list()
+	statement_block()
+	<END>
+}
+
+void statement_block() : {}
+{
+	(statement() statement_block())?
+}
+
+void statement() : {}
+{
+	<ID> statement_prime() 
+|	<BEGIN> statement_block() <END> 
+|	<IF> condition() <BEGIN> statement_block() <END> <ELSE> <BEGIN> statement_block() <END> 
+|	<WHILE> condition() <BEGIN> statement_block() <END> 
+|	<SKIP_TOKEN> <SEMICOLON>
+}
+
+void statement_prime() : {}
+{
+	<ASSIGNMENT> expression() <SEMICOLON>
+|	<LEFTBRACKET> arg_list() <RIGHTBRACKET> <SEMICOLON>
+}
+
+
+
+void expression() : {}
+{
+	fragment() expression_term() 
+|	<LEFTBRACKET> expression() <RIGHTBRACKET> expression_term()
+}
+
+
+void expression_term(): {}
+{
+	(binary_arith_op() expression())?
+}
+
+
+void condition() : {}
+{
+	<NEGATE> condition()
+|	<LEFTBRACKET> condition() <RIGHTBRACKET> boolean_condition()
+|	condition_prime() boolean_condition()
+}
+
+void boolean_condition() : {}
+{
+    ((<AND> | <OR>) condition())?
+}
+
+
+
+void condition_prime() : {}
+{
+    fragment() comp_op()
+}
+
+
+
+void binary_arith_op() : {}
+{
+	<PLUS> | <MINUS>
+}
+
+
+
+void fragment () : {}
+{
+	(<MINUS>)? <ID> (<LEFTBRACKET>arg_list()<RIGHTBRACKET>)?
+|	<NUM> 
+|	<TRUE> 
+|	<FALSE>
+}
+
+
+void comp_op() : {}
+{
+	 <EQUALS> expression()
+|	<NOTEQUALS> expression()
+|	<LT> expression()
+|	<LT_EQ> expression()
+|	<GT> expression()
+|	<GT_EQ> expression()
+}
+
+void arg_list() : {} 
+{
+	(nemp_arg_list())?
+}
+
+void nemp_arg_list() : {}
+{
+	(<ID> (<COMMA> nemp_arg_list())?)
+}

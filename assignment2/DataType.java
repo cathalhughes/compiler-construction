@@ -1,0 +1,22 @@
+public enum DataType {
+    SimpleNode,
+    prog,
+    var_decl,
+    const_decl,
+    function_list,
+    function,
+    parameter_list,
+    main,
+    statement,
+    bool,
+    bool_cond,
+    bool_cond_prime,
+    Num,
+    comp_op,
+    comp_op_prime,
+    binary_arith_op,
+    arg_list,
+    type_unknown,
+    assign,
+    TYPE
+}
